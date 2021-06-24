@@ -116,7 +116,7 @@ async function processPhotos(client) {
       console.log(`processing ${imagePath}`)
 
       // create smaller version of image
-      const image = await await sharp(imagePath).resize(600).toBuffer()
+      const image = await await sharp(imagePath).resize(700).toBuffer()
       const imageB64 = image.toString('base64')
 
       // use file name as comment

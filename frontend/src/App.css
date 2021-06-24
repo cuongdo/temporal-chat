@@ -1,5 +1,6 @@
 .App {
   text-align: center;
+  width: 700;
 }
 
 .App-logo {
@@ -43,7 +44,7 @@
 
 #main {
   margin-top: 1em;
-  width: 600px;
+  width: 700px;
   margin: 1em auto 0;
 }
 
