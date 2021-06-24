@@ -9,6 +9,7 @@ import {
   NavbarDivider,
   NavbarGroup,
   NavbarHeading,
+  ProgressBar,
 } from "@blueprintjs/core";
 
 // human-readable elapsed time since date
@@ -56,61 +57,70 @@ const uploaders = [
   'mcsherry133t',
   'ChiefDoOfficer',
   'Jessica_BarrysBootcamp',
-  'rjnn',
+  'rjnn-alt',
   'umanwizard',
   'antifuchs',
+  'uce',
 ]
 
 // main content
 class TemporalChat extends React.Component {
   constructor(props) {
     super(props);
-    this.state = {
-      imageId: null,
-      image: null,
-      error: null,
-    };
+    this.state = { }
   }
 
   pollForPhotos() {
+    // TODO: use TAIL if there's time
     fetch('http://localhost:3001/next_photo')
       .then(response => response.json())
-      .then(data => {
+      .then(image => {
         console.log('polled for new photo')
-        const uploadedAt = timeSince(data.insert_ts)
+        const uploadedAt = timeSince(image.insert_ts)
 
-        console.log(data.id)
-        console.log(this.imageId)
-        console.log(data)
-        if (data.id && data.id === this.state.imageId) {
+        console.log('state.image', this.state.image)
+        console.log('new image', image)
+
+        const oldImageId = this.state.image ? this.state.image.id : null
+        const newImageId = image ? image.id : null
+        if (oldImageId === newImageId) {
+          console.log("image unchanged!")
           return
         }
 
         const uploader = uploaders[Math.floor(Math.random() * uploaders.length)]
         this.setState({
-          imageId: data.id,
-          image: data.photo,
-          comment: data.comment,
+          image,
           uploadedAt,
           uploader,
           error: null,
+          progress: 1.0,
         })
       })
       .catch(error => {
         console.error(error)
         this.setState({
-          imageId: null,
           image: null,
-          comment: null,
-          uploadedAt: null,
           error: error,
         })
       })
   }
 
+  updateProgress() {
+    if (this.state.image) {
+      const total = this.state.image.delete_ts - this.state.image.insert_ts
+      const timeLeft = this.state.image.delete_ts - Date.now()
+      const progress = timeLeft / total
+      this.setState({
+        ...this.state,
+        progress,
+      })
+    }
+  }
+
   componentDidMount() {
     this.timer = setInterval(() => this.pollForPhotos(), 500);
-    //this.pollForPhotos()
+    this.progressTimer = setInterval(() => this.updateProgress(), 100);
   }
 
   componentWillUnmount() {
@@ -121,7 +131,7 @@ class TemporalChat extends React.Component {
   }
 
   render() {
-    if (!this.state.image) {
+    if (!this.state.image || !this.state.image.photo) {
       return (
         <div id="main">
           <img src={logo} className="App-logo" alt="logo" />
@@ -134,12 +144,14 @@ class TemporalChat extends React.Component {
     return (
       <div id="main">
         <p>
-          <img src={"data:image/jpeg;base64,"+this.state.image} alt={this.state.comment} />
+          <img src={"data:image/jpeg;base64,"+this.state.image.photo} alt={this.state.image.comment} />
+          <ProgressBar value={this.state.progress} />
         </p>
 
         <div id="comments">
-          <p id="caption">{this.state.comment}</p>
+          <p id="caption">{this.state.image.comment}</p>
           <p>Uploaded by <strong>{this.state.uploader}</strong> {this.state.uploadedAt} ago</p>
+          delete ts: {this.state.image.delete_ts}
 
           <h2>Comments</h2>
           <div className="bp3-input-group .modifier">
