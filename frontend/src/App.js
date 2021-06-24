@@ -142,8 +142,8 @@ class TemporalChat extends React.Component {
       <div id="main">
         <p>
           <img src={"data:image/jpeg;base64,"+this.state.image.photo} alt={this.state.image.comment} />
-          <ProgressBar value={this.state.progress} />
         </p>
+        <ProgressBar value={this.state.progress} />
 
         <div id="comments">
           <p id="caption">{this.state.image.comment}</p>

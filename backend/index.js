@@ -40,6 +40,8 @@ function createDirectoriesSync() {
 
 async function createTablesAndViews(client) {
   console.log('creating tables and views - all prior data will be erased')
+
+  await client.query('DROP VIEW IF EXISTS photos_count')
   await client.query('DROP VIEW IF EXISTS next_photo')
   await client.query('DROP TABLE IF EXISTS photos')
   await client.query(
@@ -51,6 +53,15 @@ async function createTablesAndViews(client) {
     // the error: TypeError: "" is not a function
     'CREATE MATERIALIZED VIEW next_photo AS SELECT id, insert_ts, delete_ts, comment, photo FROM photos WHERE mz_logical_timestamp() >= insert_ts AND mz_logical_timestamp()  < delete_ts ORDER BY insert_ts LIMIT 1'
   )
+
+  // TODO: use this from the frontend -- need to figure out how to do a
+  // long-poll HTTP request or equivalent
+  await client.query(
+    'CREATE MATERIALIZED VIEW photos_count AS SELECT COUNT(*) AS count FROM photos WHERE mz_logical_timestamp() >= insert_ts AND mz_logical_timestamp()  < delete_ts'
+  )
+  await client.query('BEGIN')
+  await client.query('DECLARE photos_count_cursor CURSOR FOR TAIL photos_count')
+  await client.query('COMMIT')
 }
 
 async function mzConnect() {
