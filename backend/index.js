@@ -1,5 +1,6 @@
 require('log-timestamp')
 
+const cors = require('cors')
 const express = require('express')
 const { Client } = require('pg')
 const fs = require('fs')
@@ -42,13 +43,13 @@ async function createTablesAndViews(client) {
   await client.query('DROP VIEW IF EXISTS next_photo')
   await client.query('DROP TABLE IF EXISTS photos')
   await client.query(
-    'CREATE TABLE photos (insert_ts NUMERIC, delete_ts NUMERIC, comment TEXT, photo TEXT)'
+    'CREATE TABLE photos (id NUMERIC, insert_ts NUMERIC, delete_ts NUMERIC, comment TEXT, photo TEXT)'
   )
   // every photo takes 2x storage in Materialize because of table + mat. view
   await client.query(
     // would love to break this into a string with newlines, but that triggers
     // the error: TypeError: "" is not a function
-    'CREATE MATERIALIZED VIEW next_photo AS SELECT insert_ts, delete_ts, comment, photo FROM photos WHERE mz_logical_timestamp() >= insert_ts AND mz_logical_timestamp()  < delete_ts ORDER BY insert_ts LIMIT 1'
+    'CREATE MATERIALIZED VIEW next_photo AS SELECT id, insert_ts, delete_ts, comment, photo FROM photos WHERE mz_logical_timestamp() >= insert_ts AND mz_logical_timestamp()  < delete_ts ORDER BY insert_ts LIMIT 1'
   )
 }
 
@@ -97,6 +98,7 @@ async function processPhotos(client) {
   })
 
   // insert photos into Materialize as base64-encoded TEXT values
+  let id = 1;
   while(true) {
     let imagePath = filesToProcess.shift()
     while(imagePath) {
@@ -110,12 +112,14 @@ async function processPhotos(client) {
       const comment = path.parse(imagePath).name
 
       // insert base64-encoded image, because MZ doesn't support binary BLOBs
-      const q = "INSERT INTO photos VALUES (extract(epoch from now()) * 1000, extract(epoch from now()) * 1000 + 30000, $1, $2)"
+      const photoLifetime = 15000 /* ms */; //TODO: lower
+      const q = `INSERT INTO photos VALUES ($1, extract(epoch from now()) * 1000, extract(epoch from now()) * 1000 + ${photoLifetime}, $2, $3)`
       // TODO: put random comment in
-      const res = await client.query(q, [comment, imageB64])
+      const res = await client.query(q, [id, comment, imageB64])
       if (res.rowCount != 1) {
         console.error('insert row count =', res.rowCount, '(expected 1)')
       }
+      id++
       console.log(`${imagePath} inserted into Materialize`)
 
       imagePath = filesToProcess.shift()
@@ -129,22 +133,24 @@ async function processPhotos(client) {
 //
 
 const app = express()
+app.use(cors());
 const port = 3001
 
 async function startRestServer(client) {
 
   app.get('/', (_, response) => {
-    response.html('hello')
+    response.json('hello')
   })
 
+  // returns next photo from the next_photo materialized view
   app.get('/next_photo', async (_, response, next) => {
     const res = await client.query(
-      'SELECT insert_ts, delete_ts, comment, photo FROM next_photo'
+      'SELECT id, insert_ts, delete_ts, comment, photo FROM next_photo'
     )
     if (res.rows > 1) {
       console.error(`expected 1 row, got ${res.rows} rows`)
     }
-    response.json(res.rows[0])
+    response.json(res.rows[0] ? res.rows[0] : {})
   })
 
   app.listen(port, () => {
