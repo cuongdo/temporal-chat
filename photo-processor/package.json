@@ -1,0 +1,18 @@
+{
+  "name": "photo_processor",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Cuong",
+  "license": "ISC",
+  "dependencies": {
+    "glob": "^7.1.7",
+    "log-timestamp": "^0.3.0",
+    "node-postgres": "^0.6.2",
+    "pg": "^8.6.0",
+    "sharp": "^0.28.3"
+  }
+}
