@@ -1,13 +1,13 @@
 const { Client } = require('pg')
 const fs = require('fs')
 require('log-timestamp')
+const path = require('path')
 const sharp = require('sharp')
 
 // hardcoded stuff
 const dataDir = '../data'
 const certDir = dataDir
 const inboxDir = `${dataDir}/inbox`
-const processedDir = `${dataDir}/processed`
 const mzHost = '8vsns4vif3o.materialize.cloud'
 
 function sleep(ms) {
@@ -17,7 +17,7 @@ function sleep(ms) {
 }
 
 function createDirectoriesSync() {
-  const directories = [ dataDir, certDir, inboxDir, processedDir ]
+  const directories = [ dataDir, certDir, inboxDir ]
   for (const dir of directories) {
     if (!fs.existsSync(dir)) {
       fs.mkdirSync(dir)
@@ -59,7 +59,7 @@ async function createTablesAndViews(client) {
   await client.query(
     // would love to break this into a string with newlines, but that triggers
     // the error: TypeError: "" is not a function
-    'CREATE MATERIALIZED VIEW next_photo AS SELECT insert_ts, comment, photo FROM photos WHERE mz_logical_timestamp() >= insert_ts AND mz_logical_timestamp()  < delete_ts ORDER BY insert_ts LIMIT 1'
+    'CREATE MATERIALIZED VIEW next_photo AS SELECT insert_ts, delete_ts, comment, photo FROM photos WHERE mz_logical_timestamp() >= insert_ts AND mz_logical_timestamp()  < delete_ts ORDER BY insert_ts LIMIT 1'
   )
 }
 
@@ -81,27 +81,27 @@ async function processPhotos() {
 
   // insert photos into Materialize as base64-encoded TEXT values
   while(true) {
-    let path = filesToProcess.shift()
-    while(path) {
-      console.log(`processing ${path}`)
+    let imagePath = filesToProcess.shift()
+    while(imagePath) {
+      console.log(`processing ${imagePath}`)
 
-      const image = await await sharp(path).resize(600).toBuffer()
+      // create smaller version of image
+      const image = await await sharp(imagePath).resize(600).toBuffer()
       const imageB64 = image.toString('base64')
 
-      const tsRes = await client.query('SELECT mz_logical_timestamp() AS ts')
-      const ts = tsRes.rows[0].ts
-      console.log('mz_logical_timestamp =', ts)
+      // use file name as comment
+      const comment = path.parse(imagePath).name
 
       // insert base64-encoded image, because MZ doesn't support binary BLOBs
       const q = "INSERT INTO photos VALUES (extract(epoch from now()) * 1000, extract(epoch from now()) * 1000 + 30000, $1, $2)"
       // TODO: put random comment in
-      const res = await client.query(q, ['comment', imageB64])
+      const res = await client.query(q, [comment, imageB64])
       if (res.rowCount != 1) {
         console.error('insert row count =', res.rowCount, '(expected 1)')
       }
-      console.log(`${path} inserted into Materialize`)
+      console.log(`${imagePath} inserted into Materialize`)
 
-      path = filesToProcess.shift()
+      imagePath = filesToProcess.shift()
     }
     await sleep(50)
   }
