@@ -75,24 +75,21 @@ class TemporalChat extends React.Component {
     fetch('http://localhost:3001/next_photo')
       .then(response => response.json())
       .then(image => {
-        console.log('polled for new photo')
         const uploadedAt = timeSince(image.insert_ts)
-
-        console.log('state.image', this.state.image)
-        console.log('new image', image)
 
         const oldImageId = this.state.image ? this.state.image.id : null
         const newImageId = image ? image.id : null
         if (oldImageId === newImageId) {
-          console.log("image unchanged!")
           return
         }
+        console.log('image changed', image)
 
         const uploader = uploaders[Math.floor(Math.random() * uploaders.length)]
         this.setState({
           image,
           uploadedAt,
           uploader,
+          refreshedAt: Date.now(),
           error: null,
           progress: 1.0,
         })
@@ -101,14 +98,14 @@ class TemporalChat extends React.Component {
         console.error(error)
         this.setState({
           image: null,
-          error: error,
+          error: error.toString(),
         })
       })
   }
 
   updateProgress() {
     if (this.state.image) {
-      const total = this.state.image.delete_ts - this.state.image.insert_ts
+      const total = this.state.image.delete_ts - this.state.refreshedAt
       const timeLeft = this.state.image.delete_ts - Date.now()
       const progress = timeLeft / total
       this.setState({
@@ -151,7 +148,6 @@ class TemporalChat extends React.Component {
         <div id="comments">
           <p id="caption">{this.state.image.comment}</p>
           <p>Uploaded by <strong>{this.state.uploader}</strong> {this.state.uploadedAt} ago</p>
-          delete ts: {this.state.image.delete_ts}
 
           <h2>Comments</h2>
           <div className="bp3-input-group .modifier">

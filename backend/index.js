@@ -92,7 +92,7 @@ async function processPhotos(client) {
   // they're a reasonable size to be a photo
   fs.watch(inboxDir, {}, (_, filename) => {
     const path = `${inboxDir}/${filename}`
-    if (fs.existsSync(path) && fs.statSync(path).size > 102400) {
+    if (fs.existsSync(path) && fs.statSync(path).size > 50400) {
       filesToProcess.push(path)
     }
   })
