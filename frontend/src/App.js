@@ -151,7 +151,7 @@ class TemporalChat extends React.Component {
 
           <h2>Comments</h2>
           <div className="bp3-input-group .modifier">
-          <input type="text" className="bp3-input" placeholder="Enter your professional, intellectually consistent comment..." />
+          <input type="text" className="bp3-input" placeholder="Enter your professional, intellectually deep comment..." />
           <button className="bp3-button bp3-minimal bp3-intent-primary bp3-icon-arrow-right"></button>
           </div>
         </div>
