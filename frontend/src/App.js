@@ -45,6 +45,7 @@ const Navigation = () => {
   return (
     <Navbar className={Classes.DARK}>
       <NavbarGroup align={Alignment.LEFT}>
+        <img src="/tclogo.png" width="30" />&nbsp;&nbsp;
         <NavbarHeading id="app-name">Temporal Chat</NavbarHeading>
         <NavbarDivider />
         <NavbarHeading>The leading temporal social network for streaming database nerds.</NavbarHeading>
@@ -141,9 +142,12 @@ class TemporalChat extends React.Component {
     return (
       <div id="main">
         <p>
+          Stored as a base64-encoded TEXT column in Materalize (because I can):<br/>
           <img src={"data:image/jpeg;base64,"+this.state.image.photo} alt={this.state.image.comment} />
         </p>
+        Time until the temporal filter removes this photo from the view:<br/>
         <ProgressBar value={this.state.progress} />
+        <br />
 
         <div id="comments">
           <p id="caption">{this.state.image.comment}</p>
@@ -151,7 +155,7 @@ class TemporalChat extends React.Component {
 
           <h2>Comments</h2>
           <div className="bp3-input-group .modifier">
-          <input type="text" className="bp3-input" placeholder="Enter your professional, intellectually deep comment..." />
+          <input type="text" className="bp3-input" placeholder="Enter your professional, intellectually deep comment... (also, this is fake)" />
           <button className="bp3-button bp3-minimal bp3-intent-primary bp3-icon-arrow-right"></button>
           </div>
         </div>

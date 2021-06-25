@@ -123,7 +123,7 @@ async function processPhotos(client) {
       const comment = path.parse(imagePath).name
 
       // insert base64-encoded image, because MZ doesn't support binary BLOBs
-      const photoLifetime = 15000 /* ms */; //TODO: lower
+      const photoLifetime = 20000 /* ms */; //TODO: lower
       const q = `INSERT INTO photos VALUES ($1, extract(epoch from now()) * 1000, extract(epoch from now()) * 1000 + ${photoLifetime}, $2, $3)`
       // TODO: put random comment in
       const res = await client.query(q, [id, comment, imageB64])
