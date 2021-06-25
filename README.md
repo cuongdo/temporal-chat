@@ -2,3 +2,5 @@
 
 Demo-quality code for Materialize Dogfooding Day. This code should not be used
 for anything.
+
+<img src="./screenshot.png" />
