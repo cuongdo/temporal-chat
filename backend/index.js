@@ -44,14 +44,31 @@ async function createTablesAndViews(client) {
   await client.query('DROP VIEW IF EXISTS photos_count')
   await client.query('DROP VIEW IF EXISTS next_photo')
   await client.query('DROP TABLE IF EXISTS photos')
+  await client.query('DROP TABLE IF EXISTS views')
   await client.query(
-    'CREATE TABLE photos (id NUMERIC, insert_ts NUMERIC, delete_ts NUMERIC, comment TEXT, photo TEXT)'
+    'CREATE TABLE photos (' +
+    'id NUMERIC, '+
+    'insert_ts NUMERIC, ' +
+    'delete_ts NUMERIC, ' +
+    'comment TEXT, photo TEXT ' +
+    ')'
   )
-  // every photo takes 2x storage in Materialize because of table + mat. view
+
+  // track view counts for photos
+  await client.query('CREATE TABLE views (photo_id NUMERIC, ts NUMERIC)');
+
+  // every photo takes 2x memory in Materialize because of table + mat. view
   await client.query(
-    // would love to break this into a string with newlines, but that triggers
+    // would love to make this a single string with newlines, but that triggers
     // the error: TypeError: "" is not a function
-    'CREATE MATERIALIZED VIEW next_photo AS SELECT id, insert_ts, delete_ts, comment, photo FROM photos WHERE mz_logical_timestamp() >= insert_ts AND mz_logical_timestamp()  < delete_ts ORDER BY insert_ts LIMIT 1'
+    'CREATE MATERIALIZED VIEW next_photo AS ' +
+    'SELECT photos.id AS id, MAX(insert_ts) AS insert_ts, MAX(delete_ts) AS delete_ts, MAX(comment) AS comment, MAX(photo) AS photo, COUNT(*) AS view_count ' +
+    'FROM photos, views ' +
+    'WHERE photos.id = views.photo_id ' +
+    'AND mz_logical_timestamp() >= insert_ts ' +
+    'AND mz_logical_timestamp()  < delete_ts ' +
+    'GROUP BY photos.id ' +
+    'ORDER BY insert_ts LIMIT 1'
   )
 
   // TODO: use this from the frontend -- need to figure out how to do a
@@ -62,6 +79,8 @@ async function createTablesAndViews(client) {
   await client.query('BEGIN')
   await client.query('DECLARE photos_count_cursor CURSOR FOR TAIL photos_count')
   await client.query('COMMIT')
+
+  console.log('done creating tables and views')
 }
 
 async function mzConnect() {
@@ -94,8 +113,6 @@ async function mzConnect() {
 
 // shrink photos and insert into Materialize table
 async function processPhotos(client) {
-  await createTablesAndViews(client)
-
   let filesToProcess = []
   console.log(`watching for photos in ${inboxDir}`)
 
@@ -139,6 +156,33 @@ async function processPhotos(client) {
   }
 }
 
+// log simulated views for photos
+async function generateViews(client) {
+  while(true) {
+    let q, res
+
+    q = 'SELECT id FROM photos '
+      'AND mz_logical_timestamp() >= insert_ts ' +
+      'AND mz_logical_timestamp()  < delete_ts '
+    res = await client.query(q)
+    if (res.rows.length == 0) {
+      continue
+    }
+    const randId = res.rows[
+      Math.floor(Math.random() * res.rows.length)
+    ].id
+
+    for (let i = 0; i < Math.floor(Math.random() * 12); i++) {
+      q = 'INSERT INTO views ' +
+        'VALUES ($1, extract(epoch from now()) * 1000)'
+      res = await client.query(q, [randId])
+      if (res.rowCount != 1) {
+        console.error('insert row count =', res.rowCount, '(expected 1)')
+      }
+    }
+  }
+}
+
 //
 // REST server
 //
@@ -156,7 +200,7 @@ async function startRestServer(client) {
   // returns next photo from the next_photo materialized view
   app.get('/next_photo', async (_, response, next) => {
     const res = await client.query(
-      'SELECT id, insert_ts, delete_ts, comment, photo FROM next_photo'
+      'SELECT id, insert_ts, delete_ts, comment, photo, view_count FROM next_photo'
     )
     if (res.rows > 1) {
       console.error(`expected 1 row, got ${res.rows} rows`)
@@ -172,6 +216,8 @@ async function startRestServer(client) {
 (async function() {
   createDirectoriesSync()
   const client = await mzConnect()
-  processPhotos(client)
+  await createTablesAndViews(client)
+  processPhotos(client) // run as worker
+  generateViews(client) // run as worker
   await startRestServer(client)
 })()

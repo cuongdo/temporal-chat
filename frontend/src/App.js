@@ -86,6 +86,14 @@ class TemporalChat extends React.Component {
         const oldImageId = this.state.image ? this.state.image.id : null
         const newImageId = image ? image.id : null
         if (oldImageId === newImageId) {
+          const oldViewCount = this.state.image ? this.state.image.view_count : null
+          const newViewCount = image ? image.id : null;
+          if (oldViewCount !== newViewCount) {
+            this.setState({
+              ...this.state,
+              image,
+            })
+          }
           return
         }
         console.log('image changed', image)
@@ -156,6 +164,7 @@ class TemporalChat extends React.Component {
 
         <div id="comments">
           <p id="caption">{this.state.image.comment}</p>
+          <p>Views: <strong>{this.state.image.view_count}</strong></p>
           <p>Uploaded by <strong>{this.state.uploader}</strong> {this.state.uploadedAt} ago</p>
 
           <h2>Comments</h2>
