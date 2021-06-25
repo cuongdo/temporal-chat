@@ -45,7 +45,7 @@ const Navigation = () => {
   return (
     <Navbar className={Classes.DARK}>
       <NavbarGroup align={Alignment.LEFT}>
-        <img src="/tclogo.png" width="30" />&nbsp;&nbsp;
+        <img src="/tclogo.png" width="30" alt="parody logo" />&nbsp;&nbsp;
         <NavbarHeading id="app-name">Temporal Chat</NavbarHeading>
         <NavbarDivider />
         <NavbarHeading>The leading temporal social network for streaming database nerds.</NavbarHeading>
@@ -167,7 +167,9 @@ class TemporalChat extends React.Component {
 const Footer = () => {
   return (
     <div id="footer">
-        Powered by <img src="https://materialize.com/wp-content/uploads/2020/02/materialize_logo_primary-1.png" alt="Materialize" width="100px" />
+      <br />
+      <br />
+      Powered by <img src="https://materialize.com/wp-content/uploads/2020/02/materialize_logo_primary-1.png" alt="Materialize" width="100px" />
     </div>
   )
 }
