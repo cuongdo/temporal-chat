@@ -62,6 +62,11 @@ const uploaders = [
   'umanwizard',
   'antifuchs',
   'uce',
+  'wangandi',
+  'mikepu',
+  'AlexHunt',
+  'aljoscha',
+  'antiguru',
 ]
 
 // main content
